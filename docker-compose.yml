@@ -1,6 +1,30 @@
 version: '3.2'
 
 services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - elk
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CREATE_TOPICS: "test:1:1"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elk
+
   elasticsearch:
     build:
       context: elasticsearch/
@@ -48,6 +72,7 @@ services:
     networks:
       - elk
     depends_on:
+      - kafka
       - elasticsearch
 
   kibana:
@@ -66,10 +91,8 @@ services:
       - elk
     depends_on:
       - elasticsearch
-
 networks:
   elk:
     driver: bridge
-
 volumes:
   elasticsearch:
